@@ -15,9 +15,11 @@ export const maxDuration = 30;
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
 
+  const currentDate = new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
+
   const result = streamText({
     model: busAdvisorChatModel,
-    system: BUS_ADVISOR_SYSTEM_PROMPT,
+    system: `${BUS_ADVISOR_SYSTEM_PROMPT}\n\n[THÔNG TIN THỜI GIAN THỰC]\n- Bây giờ là: ${currentDate}. Hãy dùng mốc thời gian này để hiểu "hôm nay", "ngày mai" hoặc khi người dùng hỏi giờ.`,
     messages: await convertToModelMessages(messages),
     tools: createBusAdvisorTools(),
     stopWhen: stepCountIs(5),
