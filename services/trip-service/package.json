@@ -1,0 +1,27 @@
+{
+  "name": "trip-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate": "knex migrate:latest",
+    "rollback": "knex migrate:rollback",
+    "seed": "knex seed:run",
+    "start": "node src/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.4",
+    "@grpc/proto-loader": "^0.8.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "kafkajs": "^2.2.4",
+    "knex": "^3.3.0",
+    "pg": "^8.22.0",
+    "redis": "^6.1.0"
+  }
+}

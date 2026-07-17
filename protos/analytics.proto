@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package analytics;
+
+service AnalyticsService {
+  rpc GetRevenueSummary(GetRevenueSummaryRequest) returns (GetRevenueSummaryResponse);
+  rpc GetPopularRoutes(GetPopularRoutesRequest) returns (GetPopularRoutesResponse);
+  rpc GetBookingConversionRate(GetBookingConversionRateRequest) returns (GetBookingConversionRateResponse);
+}
+
+message GetRevenueSummaryRequest {
+  string start_date = 1;
+  string end_date = 2;
+}
+
+message DailyRevenue {
+  string date = 1;
+  int32 total_revenue = 2;
+  int32 total_bookings = 3;
+}
+
+message GetRevenueSummaryResponse {
+  repeated DailyRevenue revenue_list = 1;
+}
+
+message GetPopularRoutesRequest {
+  int32 limit = 1;
+}
+
+message RouteStat {
+  string origin = 1;
+  string destination = 2;
+  int32 search_count = 3;
+  int32 booking_count = 4;
+}
+
+message GetPopularRoutesResponse {
+  repeated RouteStat routes = 1;
+}
+
+message GetBookingConversionRateRequest {}
+
+message GetBookingConversionRateResponse {
+  int32 total_searches = 1;
+  int32 total_bookings = 2;
+  double conversion_rate = 3; // percentage
+}
