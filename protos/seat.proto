@@ -1,0 +1,66 @@
+syntax = "proto3";
+package seat;
+
+service SeatInventoryService {
+  rpc GetSeatMap(GetSeatMapRequest) returns (SeatMapResponse);
+  rpc HoldSeats(HoldSeatsRequest) returns (HoldSeatsResponse);
+  rpc LockSeats(LockSeatsRequest) returns (LockSeatsResponse);
+  rpc ConfirmSeats(ConfirmSeatsRequest) returns (ConfirmSeatsResponse);
+  rpc ReleaseSeats(ReleaseSeatsRequest) returns (ReleaseSeatsResponse);
+}
+
+message Seat {
+  string id = 1;
+  string seat_number = 2; // VD: A01, A02
+  string status = 3; // AVAILABLE, HELD, BOOKED, BLOCKED, LOCKED
+}
+
+message GetSeatMapRequest {
+  string trip_id = 1;
+  int32 total_seats = 2;
+}
+
+message SeatMapResponse {
+  repeated Seat seats = 1;
+}
+
+message HoldSeatsRequest {
+  string trip_id = 1;
+  repeated string seat_ids = 2;
+  string user_id = 3; // Gắn ID người dùng hoặc session ẩn danh để giữ ghế
+}
+
+message HoldSeatsResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message LockSeatsRequest {
+  string trip_id = 1;
+  repeated string seat_ids = 2;
+}
+
+message LockSeatsResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ConfirmSeatsRequest {
+  string trip_id = 1;
+  repeated string seat_ids = 2;
+}
+
+message ConfirmSeatsResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ReleaseSeatsRequest {
+  string trip_id = 1;
+  repeated string seat_ids = 2;
+}
+
+message ReleaseSeatsResponse {
+  bool success = 1;
+  string message = 2;
+}
