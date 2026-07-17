@@ -1,0 +1,14 @@
+{
+  "name": "ticket-notification-service",
+  "version": "1.0.0",
+  "description": "Ticket and Notification Service",
+  "main": "src/worker.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/worker.js"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.3",
+    "dotenv": "^16.4.5"
+  }
+}

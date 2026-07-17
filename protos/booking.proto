@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package booking;
+
+service BookingService {
+  rpc CreateBooking (CreateBookingRequest) returns (CreateBookingResponse) {}
+  rpc PayBooking (PayBookingRequest) returns (PayBookingResponse) {}
+  rpc GetBooking (GetBookingRequest) returns (GetBookingResponse) {}
+}
+
+message Passenger {
+  string full_name = 1;
+  string phone_number = 2;
+  string email = 3;
+  string id_card = 4;
+  string seat_id = 5;
+}
+
+message CreateBookingRequest {
+  string trip_id = 1;
+  string user_id = 2; // Optional, empty for guest
+  repeated Passenger passengers = 3;
+  double total_amount = 4;
+}
+
+message CreateBookingResponse {
+  bool success = 1;
+  string message = 2;
+  string booking_id = 3;
+}
+
+message PayBookingRequest {
+  string booking_id = 1;
+  bool payment_success = 2;
+}
+
+message PayBookingResponse {
+  bool success = 1;
+  string message = 2;
+  string status = 3; // "PAID" or "FAILED"
+}
+
+message GetBookingRequest {
+  string booking_id = 1;
+  string email = 2; // Optional for auth check
+}
+
+message BookingDetails {
+  string id = 1;
+  string trip_id = 2;
+  string user_id = 3;
+  string status = 4;
+  double total_amount = 5;
+  repeated Passenger passengers = 6;
+  string created_at = 7;
+}
+
+message GetBookingResponse {
+  bool success = 1;
+  string message = 2;
+  BookingDetails booking = 3;
+}
