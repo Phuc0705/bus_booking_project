@@ -22,7 +22,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     } else {
       const parsedUser = JSON.parse(userStr);
       if (parsedUser.role !== 'ADMIN' && parsedUser.role !== 'STAFF') {
-        router.push("/");
+        router.push("/login");
       } else {
         setUser(parsedUser);
       }

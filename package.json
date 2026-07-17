@@ -1,0 +1,43 @@
+{
+  "name": "bus-booking-system",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "graphql-gateway",
+    "services/*",
+    "mcp-server",
+    "frontend"
+  ],
+  "scripts": {
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "infra:down-v": "docker compose down -v",
+    "infra:logs": "docker compose logs -f",
+    "migrate": "npm run migrate --workspaces --if-present",
+    "seed": "npm run seed --workspaces --if-present",
+    "dev:user": "npm run start --workspace=user-service",
+    "dev:trip": "npm run start --workspace=trip-service",
+    "dev:booking": "npm run start --workspace=booking-service",
+    "dev:seat": "npm run start --workspace=seat-inventory-service",
+    "dev:ticket": "npm run start --workspace=ticket-notification-service",
+    "dev:outbox": "npm run worker:outbox --workspace=booking-service",
+    "dev:analytics": "npm run start --workspace=analytics-service",
+    "dev:gateway": "npm run start --workspace=graphql-gateway",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:reset": "npm run infra:down-v && npm run infra:up && npm run migrate && npm run seed && npm run dev",
+    "dev:backend": "concurrently -k -n user,trip,booking,seat,ticket,outbox,analytics,gateway \"npm run dev:user\" \"npm run dev:trip\" \"npm run dev:booking\" \"npm run dev:seat\" \"npm run dev:ticket\" \"npm run dev:outbox\" \"npm run dev:analytics\" \"npm run dev:gateway\"",
+    "dev": "concurrently -k -n user,trip,booking,seat,ticket,outbox,analytics,gateway,frontend \"npm run dev:user\" \"npm run dev:trip\" \"npm run dev:booking\" \"npm run dev:seat\" \"npm run dev:ticket\" \"npm run dev:outbox\" \"npm run dev:analytics\" \"npm run dev:gateway\" \"npm run dev:frontend\""
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "description": "",
+  "main": "test-double-booking.js",
+  "devDependencies": {
+    "concurrently": "^10.0.3"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

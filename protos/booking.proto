@@ -1,62 +1,97 @@
 syntax = "proto3";
-
 package booking;
 
 service BookingService {
-  rpc CreateBooking (CreateBookingRequest) returns (CreateBookingResponse) {}
-  rpc PayBooking (PayBookingRequest) returns (PayBookingResponse) {}
-  rpc GetBooking (GetBookingRequest) returns (GetBookingResponse) {}
+  rpc CreateBooking(CreateBookingRequest) returns (BookingResponse);
+  rpc PayBooking(PayBookingRequest) returns (BookingResponse);
+  rpc CancelBooking(CancelBookingRequest) returns (BookingResponse);
+  rpc GetBooking(GetBookingRequest) returns (BookingResponse);
+  rpc GetAllBookings(GetAllBookingsRequest) returns (GetAllBookingsResponse);
+  rpc GetUserBookings(GetUserBookingsRequest) returns (GetAllBookingsResponse);
+  rpc GetBookingByIdAndEmail(GetBookingByIdAndEmailRequest) returns (GetBookingByIdAndEmailResponse);
+  rpc CheckinBooking(CheckinBookingRequest) returns (BookingResponse);
 }
 
-message Passenger {
-  string full_name = 1;
-  string phone_number = 2;
-  string email = 3;
-  string id_card = 4;
-  string seat_id = 5;
+message PassengerInfo {
+  string seat_id = 1;
+  string name = 2;
+  string phone = 3;
+  string email = 4;
+  string identity_number = 5;
 }
 
 message CreateBookingRequest {
   string trip_id = 1;
-  string user_id = 2; // Optional, empty for guest
-  repeated Passenger passengers = 3;
-  double total_amount = 4;
-}
-
-message CreateBookingResponse {
-  bool success = 1;
-  string message = 2;
-  string booking_id = 3;
+  repeated PassengerInfo passengers = 2;
+  string customer_name = 3;
+  string customer_email = 4;
+  string customer_phone = 5;
+  string user_id = 6; // Truyền rỗng nếu là Guest checkout
 }
 
 message PayBookingRequest {
   string booking_id = 1;
-  bool payment_success = 2;
 }
 
-message PayBookingResponse {
-  bool success = 1;
-  string message = 2;
-  string status = 3; // "PAID" or "FAILED"
+message CancelBookingRequest {
+  string booking_id = 1;
+}
+
+message BookingResponse {
+  string booking_id = 1;
+  string status = 2; // Trạng thái: DRAFT, PENDING_PAYMENT, PAID, CANCELLED
+  string message = 3;
 }
 
 message GetBookingRequest {
   string booking_id = 1;
-  string email = 2; // Optional for auth check
+  string email = 2; // Yêu cầu nhập kèm email để Guest tra cứu vé an toàn
 }
 
-message BookingDetails {
+message GetAllBookingsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+  string trip_id = 3;
+}
+
+message GetUserBookingsRequest {
+  string user_id = 1;
+}
+
+message GetAllBookingsResponse {
+  repeated BookingInfo bookings = 1;
+  int32 total = 2;
+}
+
+message TicketInfo {
+  string seat_number = 1;
+  string ticket_code = 2;
+  string passenger_name = 3;
+  string passenger_phone = 4;
+  string passenger_email = 5;
+  string passenger_identity = 6;
+}
+
+message BookingInfo {
   string id = 1;
   string trip_id = 2;
-  string user_id = 3;
-  string status = 4;
-  double total_amount = 5;
-  repeated Passenger passengers = 6;
-  string created_at = 7;
+  string customer_name = 3;
+  string customer_phone = 4;
+  string customer_email = 5;
+  int32 total_amount = 6;
+  string status = 7;
+  repeated TicketInfo tickets = 8;
+  string created_at = 9;
 }
 
-message GetBookingResponse {
-  bool success = 1;
-  string message = 2;
-  BookingDetails booking = 3;
+message CheckinBookingRequest {
+  string booking_id = 1;
+}
+message GetBookingByIdAndEmailRequest {
+  string id = 1;
+  string email = 2;
+}
+
+message GetBookingByIdAndEmailResponse {
+  BookingInfo booking = 1;
 }

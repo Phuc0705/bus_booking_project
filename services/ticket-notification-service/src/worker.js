@@ -1,99 +1,79 @@
-import "dotenv/config";
 import amqp from "amqplib";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import "dotenv/config";
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || "amqp://app:app123@localhost:5672";
 const EXCHANGE = process.env.RABBITMQ_EXCHANGE || "booking.events";
-const QUEUE_NAME = process.env.QUEUE_NAME || "ticket.generate.queue";
-const ROUTING_KEY = process.env.ROUTING_KEY || "booking.paid"; // or booking.created
+const QUEUE = process.env.QUEUE_NAME || "ticket.generate.queue";
+const ROUTING_KEY = process.env.ROUTING_KEY || "booking.paid";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const TICKETS_DIR = path.resolve(__dirname, "../tickets_output");
+// Hàm mô phỏng việc sinh vé PDF và gửi Email
+async function processTicketGeneration(payload) {
+  console.log("\n------------------------------------------------");
+  console.log(`[x] Bắt đầu xử lý vé cho Booking ID: ${payload.bookingId}`);
+  console.log(`[-] Gửi email tới liên hệ chính: ${payload.customerEmail}`);
+  console.log(`[-] Chi tiết chuyến xe: ${payload.tripId}`);
+  
+  // Giả lập thời gian phần mềm PDF render và Server Email xử lý mất 2 giây
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
+  if (payload.tickets && Array.isArray(payload.tickets)) {
+    payload.tickets.forEach((ticket, index) => {
+      console.log(`  [+] Vé ${index + 1}:`);
+      console.log(`      - Mã vé: ${ticket.ticket_code}`);
+      console.log(`      - Số ghế: ${ticket.seat_number}`);
+      console.log(`      - Hành khách: ${ticket.passenger_name}`);
+    });
+  }
+  
+  console.log(`[v] Đã sinh vé điện tử thành công cho ${payload.tickets?.length || 0} hành khách`);
+  console.log(`[v] Đã gửi Email mô phỏng kèm mã QR!`);
+  console.log("------------------------------------------------\n");
+}
 
-async function init() {
+async function startConsumer() {
   try {
-    await fs.mkdir(TICKETS_DIR, { recursive: true });
-    
-    const conn = await amqp.connect(RABBITMQ_URL);
-    const channel = await conn.createChannel();
-    
-    // Assert exchange & queue
+    const connection = await amqp.connect(RABBITMQ_URL);
+    const channel = await connection.createChannel();
+
+    // 1. Đảm bảo Exchange tồn tại (phải khớp với loại 'topic' của Publisher)
     await channel.assertExchange(EXCHANGE, "topic", { durable: true });
-    await channel.assertQueue(QUEUE_NAME, { durable: true });
-    await channel.bindQueue(QUEUE_NAME, EXCHANGE, ROUTING_KEY);
-    // Also bind to booking.paid if different
-    if (ROUTING_KEY !== "booking.paid") {
-       await channel.bindQueue(QUEUE_NAME, EXCHANGE, "booking.paid");
-    }
 
-    console.log(`[TicketWorker] Waiting for messages in queue: ${QUEUE_NAME}`);
+    // 2. Khởi tạo hàng đợi (Queue) để hứng tin nhắn
+    await channel.assertQueue(QUEUE, { durable: true });
 
-    channel.consume(QUEUE_NAME, async (msg) => {
+    // 3. Ràng buộc (Bind) Queue vào Exchange thông qua Routing Key
+    await channel.bindQueue(QUEUE, EXCHANGE, ROUTING_KEY);
+
+    // 4. Giới hạn mỗi worker chỉ xử lý 1 tin nhắn một lúc để tránh quá tải
+    await channel.prefetch(1);
+
+    console.log(`[*] Chờ đón sự kiện từ hàng đợi '${QUEUE}'. Bấm CTRL+C để thoát.`);
+
+    // 5. Bắt đầu lắng nghe
+    channel.consume(QUEUE, async (msg) => {
       if (msg !== null) {
         try {
-          const payload = JSON.parse(msg.content.toString());
-          console.log(`[TicketWorker] Received event ${msg.fields.routingKey} for booking ${payload.booking_id}`);
+          const event = JSON.parse(msg.content.toString());
+          // Outbox gửi lên một object có chứa field "payload"
+          const payload = event.payload; 
           
-          await generateTicket(payload);
-          await simulateEmail(payload);
-
+          await processTicketGeneration(payload);
+          
+          // Xác nhận xử lý thành công (ACK) để RabbitMQ xóa tin nhắn khỏi hàng đợi
           channel.ack(msg);
-        } catch (err) {
-          console.error(`[TicketWorker] Error processing message:`, err);
-          // depending on error, you might nack or ack. Here we'll ack to not block queue on bad message
-          channel.ack(msg);
+        } catch (error) {
+          console.error("[!] Lỗi xử lý sự kiện:", error);
+          // Nếu có lỗi nghiêm trọng, từ chối (NACK) và không đưa lại vào hàng đợi (false)
+          // Thực tế có thể đưa vào Dead Letter Queue để admin xử lý sau
+          channel.nack(msg, false, false); 
         }
       }
-    });
-  } catch (err) {
-    console.error("[TicketWorker] Connection error:", err);
-    setTimeout(init, 5000);
+    }, { noAck: false }); // Bắt buộc phải có lệnh channel.ack() thủ công
+
+  } catch (error) {
+    console.error("[!] Lỗi khởi tạo RabbitMQ Consumer:", error);
+    process.exit(1);
   }
 }
 
-async function generateTicket(payload) {
-  const { booking_id, trip_id, passengers } = payload;
-  const ticketId = `TKT-${booking_id}`;
-  
-  const htmlContent = `
-    <html>
-      <head><title>E-Ticket ${ticketId}</title></head>
-      <body>
-        <h1>Bus Ticket Confirmation</h1>
-        <p><strong>Booking ID:</strong> ${booking_id}</p>
-        <p><strong>Trip ID:</strong> ${trip_id}</p>
-        <p><strong>Ticket ID:</strong> ${ticketId}</p>
-        <hr/>
-        <h2>Passengers</h2>
-        <ul>
-          ${(passengers || []).map(p => `
-            <li>${p.full_name} - Phone: ${p.phone_number} - Seat: ${p.seat_id}</li>
-          `).join("")}
-        </ul>
-        <p><em>Thank you for booking with us! Please show this ticket at check-in.</em></p>
-      </body>
-    </html>
-  `;
-  
-  const filePath = path.join(TICKETS_DIR, `${ticketId}.html`);
-  await fs.writeFile(filePath, htmlContent);
-  console.log(`[TicketWorker] Ticket HTML generated at ${filePath}`);
-}
-
-async function simulateEmail(payload) {
-  const { booking_id, passengers } = payload;
-  if (!passengers || passengers.length === 0) return;
-  
-  const primaryEmail = passengers[0].email;
-  if (primaryEmail) {
-    console.log(`[EmailWorker] Simulating sending email to ${primaryEmail} for booking ${booking_id}...`);
-    console.log(`[EmailWorker] Email sent successfully.`);
-  } else {
-    console.log(`[EmailWorker] No email found for booking ${booking_id}. Skipped.`);
-  }
-}
-
-init();
+startConsumer();

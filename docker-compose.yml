@@ -1,0 +1,83 @@
+services:
+  # 1. PostgreSQL - Lưu trữ dữ liệu chính
+  postgres:
+    image: postgres:15-alpine
+    container_name: bus_postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: "123456"
+    ports:
+      - "15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+      interval: 5s
+      timeout: 30s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+
+  # 2. Redis - Cache và Hold Seat (Khóa ghế nguyên tử)
+  redis:
+    image: redis:7-alpine
+    container_name: bus_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    volumes:
+      - redis_data:/data
+
+  # 3. RabbitMQ - Message Broker cho luồng Đặt vé & Gửi thông báo
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: bus_rabbitmq
+    ports:
+      - "5672:5672"   # Cổng AMQP
+      - "15672:15672" # Giao diện UI quản lý
+    environment:
+      RABBITMQ_DEFAULT_USER: app
+      RABBITMQ_DEFAULT_PASS: app123
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  # 4. Kafka - Data Streaming cho hệ thống phân tích (Analytics)
+  kafka:
+    image: apache/kafka:latest
+    container_name: bus_kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:9092'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@localhost:9093'
+      KAFKA_CLUSTER_ID: 'Mk3OEYBSD34fcwNTJENDM2Qk'
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  # 5. NGINX - Reverse Proxy & Load Balancer
+  nginx:
+    image: nginx:alpine
+    container_name: bus_nginx
+    ports:
+      - "80:80"
+      - "50000:50052" # Port gRPC proxy
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  postgres_data:
+  redis_data:
+  kafka_data:
